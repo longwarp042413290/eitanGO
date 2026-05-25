@@ -362,6 +362,47 @@ body {
   text-align: center;
 }
 
+.today-studied {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 0.5rem;
+}
+
+.today-studied-heading {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.625rem;
+  line-height: 1.5;
+}
+
+.today-studied-count {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.today-studied-list {
+  max-height: min(40vh, 320px);
+  overflow-y: auto;
+}
+
+.today-studied-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 0.75rem;
+  align-items: center;
+  background: var(--surface);
+  padding: 0.625rem 0.875rem;
+}
+
+.today-studied-check {
+  font-size: 0.75rem;
+  color: var(--check);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Buttons */
 .btn {
   flex: 1;
