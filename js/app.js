@@ -12,7 +12,7 @@
   /** @typedef {'idle'|'main'|'main_done'|'check2'|'complete'} DailyPhase */
   /** @typedef {{ word: string, meaning: string, checks: number, mastered: boolean, reviewTomorrow: boolean, lastReviewedDay: number, lastCheckDay: number }} WordEntry */
   /** @typedef {{ dailyGoal: number }} Settings */
-  /** @typedef {{ cycle: number, phase: DailyPhase, mainQueue: string[], mainIndex: number, check2Queue: string[], check2Index: number, mainReviewCount: number, mainNewCount: number, priorityQueue: string[], priorityIndex: number, priorityReturnPhase: DailyPhase }} DailyState */
+  /** @typedef {{ cycle: number, phase: DailyPhase, mainQueue: string[], mainIndex: number, check2Queue: string[], check2Index: number, mainReviewCount: number, mainNewCount: number, priorityQueue: string[], priorityIndex: number, priorityReturnPhase: DailyPhase, studiedTodayWords: string[] }} DailyState */
 
   /** @type {WordEntry[]} */
   let words = [];
@@ -87,6 +87,10 @@
     addError: $("add-error"),
     wordList: $("word-list"),
     listEmpty: $("list-empty"),
+    todayStudiedSection: $("today-studied-section"),
+    todayStudiedCycle: $("today-studied-cycle"),
+    todayStudiedCount: $("today-studied-count"),
+    todayStudiedList: $("today-studied-list"),
   };
 
   function currentCycle() {
@@ -105,6 +109,7 @@
       mainReviewCount: 0,
       mainNewCount: 0,
       priorityReturnPhase: "main_done",
+      studiedTodayWords: [],
     };
   }
 
@@ -250,7 +255,73 @@
     if (dailyState.phase === "priority") {
       dailyState.phase = dailyState.priorityReturnPhase || "main_done";
     }
+    migrateStudiedTodayWords();
     saveDailyState();
+  }
+
+  function migrateStudiedTodayWords() {
+    if (!Array.isArray(dailyState.studiedTodayWords)) {
+      dailyState.studiedTodayWords = [];
+    }
+    if (dailyState.studiedTodayWords.length > 0) return;
+    const cycle = currentCycle();
+    dailyState.studiedTodayWords = words
+      .filter((w) => w.lastReviewedDay === cycle)
+      .map((w) => w.word);
+  }
+
+  function recordStudiedToday(word) {
+    if (!Array.isArray(dailyState.studiedTodayWords)) {
+      dailyState.studiedTodayWords = [];
+    }
+    if (!dailyState.studiedTodayWords.includes(word)) {
+      dailyState.studiedTodayWords.push(word);
+      saveDailyState();
+    }
+  }
+
+  function getTodayStudiedEntries() {
+    const order = dailyState.studiedTodayWords || [];
+    return order
+      .map((word) => findWord(word))
+      .filter((entry) => entry != null);
+  }
+
+  function renderTodayStudiedSection() {
+    const entries = getTodayStudiedEntries();
+    const show =
+      cardMode === "daily" &&
+      cardScreen !== "play" &&
+      entries.length > 0;
+
+    els.todayStudiedSection.classList.toggle("hidden", !show);
+    if (!show) return;
+
+    els.todayStudiedCycle.textContent = String(dailyState.cycle);
+    els.todayStudiedCount.textContent = String(entries.length);
+    els.todayStudiedList.innerHTML = "";
+
+    entries.forEach((entry) => {
+      const li = document.createElement("li");
+      li.className = "today-studied-item";
+
+      const main = document.createElement("div");
+      main.className = "word-item-main";
+      const en = document.createElement("span");
+      en.className = "word-en";
+      en.textContent = entry.word;
+      const meaning = document.createElement("span");
+      meaning.className = "word-meaning";
+      meaning.textContent = entry.meaning;
+      main.append(en, meaning);
+
+      const check = document.createElement("span");
+      check.className = "today-studied-check";
+      check.textContent = `✓ ${entry.checks}`;
+
+      li.append(main, check);
+      els.todayStudiedList.appendChild(li);
+    });
   }
 
   function loadWords() {
@@ -680,8 +751,10 @@
     else if (cardScreen === "play") {
       renderPlayPanel();
       els.cardText.focus();
-    } else if (cardScreen === "result") renderResultPanel();
+    }     else if (cardScreen === "result") renderResultPanel();
     else if (cardScreen === "end") renderEndPanel();
+
+    renderTodayStudiedSection();
   }
 
   function setView(name) {
@@ -793,6 +866,7 @@
     decayCheckOnesOnAdvance();
     dailyState.cycle = next;
     dailyState.phase = "idle";
+    dailyState.studiedTodayWords = [];
     resetSessionQueues();
     saveDailyState();
 
@@ -831,6 +905,7 @@
       ref.lastReviewedDay = currentCycle();
       if (cardMode === "daily") {
         ref.reviewTomorrow = false;
+        recordStudiedToday(ref.word);
       }
       saveWords();
     }
